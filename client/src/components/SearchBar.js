@@ -1,0 +1,4 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+export function SearchBar({ value, onChange, loading }) {
+    return (_jsxs("section", { className: "hero-card", children: [_jsx("div", { className: "eyebrow", children: "Search Flow" }), _jsx("h1", { children: "Search tracks or drop in a SoundCloud URL." }), _jsx("p", { className: "hero-copy", children: "Official embeds, metadata-first analysis, and a workspace that keeps up with what you are auditioning." }), _jsxs("label", { className: "input-shell", children: [_jsx("span", { className: "input-label", children: "Search Tracks" }), _jsxs("div", { className: "input-row", children: [_jsx("input", { value: value, onChange: (event) => onChange(event.target.value), placeholder: "Try artist, title, or mood", type: "search" }), _jsx("span", { className: `status-dot ${loading ? "is-live" : ""}`, children: loading ? "Searching" : "Ready" })] })] })] }));
+}
