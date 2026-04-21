@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 
 const LOSSLESS_FORMATS = new Set(["flac", "wav"]);
 const MP3_BITRATES = ["128k", "192k", "256k", "320k"] as const;
+const FORMAT_OPTIONS = ["mp3", "flac", "wav"] as const;
 
-type DownloadFormat = "mp3" | "aac" | "opus" | "m4a" | "flac" | "wav";
+type DownloadFormat = typeof FORMAT_OPTIONS[number];
 type DownloadQuality = "0" | "2" | "5" | "7" | "9" | "128k" | "192k" | "256k" | "320k";
 type StatusType = "idle" | "downloading" | "done" | "error";
 
@@ -122,11 +123,11 @@ export default function App() {
     <main className="page-shell">
       <div className="noise-layer" />
       <section className="hero">
-        <p className="eyebrow">Local downloader</p>
+        <p className="eyebrow">✌️</p>
         <h1>
           SND<span>CLD</span>
         </h1>
-        <p className="hero-copy">Simple SoundCloud downloading, powered by yt-dlp. Works locally or in the cloud.</p>
+        {/* <p className="hero-copy">Simple SoundCloud downloading, powered by yt-dlp. Works locally or in the cloud.</p> */}
       </section>
 
       <section className="card">
@@ -150,21 +151,28 @@ export default function App() {
         <div className="grid-row">
           <label className="field">
             <span>Format</span>
-            <select
-              onChange={(event) => setFormat(event.target.value as DownloadFormat)}
-              value={format}
+            <div
+              aria-label="Download format"
+              className="format-tabs"
+              role="tablist"
             >
-              <option value="mp3">MP3</option>
-              <option value="aac">AAC</option>
-              <option value="opus">OPUS</option>
-              <option value="m4a">M4A</option>
-              <option value="flac">FLAC</option>
-              <option value="wav">WAV</option>
-            </select>
+              {FORMAT_OPTIONS.map((option) => (
+                <button
+                  aria-selected={format === option}
+                  className={`format-tab ${format === option ? "is-active" : ""}`}
+                  key={option}
+                  onClick={() => setFormat(option)}
+                  role="tab"
+                  type="button"
+                >
+                  {option.toUpperCase()}
+                </button>
+              ))}
+            </div>
           </label>
 
           <label className="field">
-            <span>{isMp3 ? "Bitrate" : "Quality"}</span>
+            <span>Quality</span>
             {isLossless ? (
               <div className="lossless-pill">Lossless, no extra quality setting</div>
             ) : isMp3 ? (
@@ -193,9 +201,7 @@ export default function App() {
           </label>
         </div>
 
-        <p className="note">
-          Requires <code>yt-dlp</code> and <code>ffmpeg</code> available in PATH (install via Homebrew on macOS or your system package manager).
-        </p>
+        <p className="note"></p>
 
         <button className="download-button" disabled={isBusy} onClick={() => void startDownload()}>
           {isBusy ? "DOWNLOADING" : "DOWNLOAD"}

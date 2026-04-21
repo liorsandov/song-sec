@@ -1,17 +1,14 @@
 {
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
+    "incremental": false,
     "jsx": "react-jsx",
+    "noEmit": true,
     "types": [
       "vite/client"
     ]
   },
   "include": [
     "src"
-  ],
-  "references": [
-    {
-      "path": "./tsconfig.node.json"
-    }
   ]
 }

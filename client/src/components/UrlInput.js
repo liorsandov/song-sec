@@ -1,4 +1,0 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-export function UrlInput({ value, onChange, onSubmit, loading, disabled }) {
-    return (_jsxs("section", { className: "panel panel-compact", children: [_jsxs("div", { className: "section-head", children: [_jsxs("div", { children: [_jsx("p", { className: "section-kicker", children: "URL Analyzer" }), _jsx("h2", { children: "Paste a track link" })] }), _jsx("button", { className: "action-button", onClick: onSubmit, disabled: loading || disabled, type: "button", children: loading ? "Analyzing..." : "Analyze" })] }), _jsxs("label", { className: "input-shell", children: [_jsx("span", { className: "input-label", children: "SoundCloud Track URL" }), _jsx("input", { value: value, onChange: (event) => onChange(event.target.value), placeholder: "https://soundcloud.com/artist/track", type: "url" })] })] }));
-}

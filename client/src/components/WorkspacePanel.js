@@ -1,4 +1,0 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-export function WorkspacePanel({ tracks, activeTrackId, onSelect }) {
-    return (_jsxs("section", { className: "panel side-panel", children: [_jsxs("div", { className: "section-head", children: [_jsxs("div", { children: [_jsx("p", { className: "section-kicker", children: "Workspace" }), _jsx("h2", { children: "Session tracks" })] }), _jsx("span", { className: "counter-pill", children: tracks.length })] }), tracks.length ? (_jsx("div", { className: "mini-list", children: tracks.map((track) => (_jsxs("button", { className: `mini-card ${activeTrackId === track.id ? "is-active" : ""}`, onClick: () => onSelect(track), type: "button", children: [_jsx("strong", { children: track.title }), _jsx("span", { children: track.artist })] }, `${track.id}-${track.source}`))) })) : (_jsx("div", { className: "empty-mini", children: "Tracks you inspect stay in this workspace." }))] }));
-}
