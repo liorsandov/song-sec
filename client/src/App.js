@@ -1,12 +1,19 @@
-import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
-import { useEffect, useRef, useState } from "react";
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { useEffect, useState } from "react";
 const LOSSLESS_FORMATS = new Set(["flac", "wav"]);
+const MP3_BITRATES = ["128k", "192k", "256k", "320k"];
 const qualityOptions = [
     { value: "0", label: "Best, around 245 kbps" },
     { value: "2", label: "High, around 190 kbps" },
     { value: "5", label: "Medium, around 130 kbps" },
     { value: "7", label: "Low, around 100 kbps" },
     { value: "9", label: "Worst, around 65 kbps" }
+];
+const mp3BitrateOptions = [
+    { value: "320k", label: "320 kbps (best)" },
+    { value: "256k", label: "256 kbps" },
+    { value: "192k", label: "192 kbps" },
+    { value: "128k", label: "128 kbps" }
 ];
 function readFilename(disposition, fallbackFormat) {
     if (!disposition) {
@@ -22,69 +29,27 @@ function readFilename(disposition, fallbackFormat) {
 export default function App() {
     const [url, setUrl] = useState("");
     const [format, setFormat] = useState("mp3");
-    const [quality, setQuality] = useState("0");
+    const [quality, setQuality] = useState("320k");
     const [statusType, setStatusType] = useState("idle");
     const [statusMessage, setStatusMessage] = useState("Paste a SoundCloud track URL, choose a format, and download it.");
-    const [trackDetails, setTrackDetails] = useState(null);
-    const [detailsLoading, setDetailsLoading] = useState(false);
-    const [detailsError, setDetailsError] = useState("");
-    const detailsRequestRef = useRef(0);
     const isLossless = LOSSLESS_FORMATS.has(format);
+    const isMp3 = format === "mp3";
     const isBusy = statusType === "downloading";
     const trimmedUrl = url.trim();
     const looksLikeSoundCloudUrl = trimmedUrl.includes("soundcloud.com") || trimmedUrl.includes("snd.sc");
+    // Reset quality when format changes
+    useEffect(() => {
+        if (isMp3) {
+            setQuality("320k");
+        }
+        else {
+            setQuality("0");
+        }
+    }, [isMp3]);
     const setStatus = (type, message) => {
         setStatusType(type);
         setStatusMessage(message);
     };
-    useEffect(() => {
-        if (!trimmedUrl || !looksLikeSoundCloudUrl) {
-            setTrackDetails(null);
-            setDetailsError("");
-            setDetailsLoading(false);
-            return;
-        }
-        const requestId = detailsRequestRef.current + 1;
-        detailsRequestRef.current = requestId;
-        setDetailsLoading(true);
-        setDetailsError("");
-        const timeoutId = window.setTimeout(() => {
-            void (async () => {
-                try {
-                    const response = await fetch("/api/track-details", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify({ url: trimmedUrl })
-                    });
-                    const payload = (await response.json().catch(() => null));
-                    if (detailsRequestRef.current !== requestId) {
-                        return;
-                    }
-                    if (!response.ok || !payload || !("track" in payload) || !("details" in payload)) {
-                        throw new Error(payload?.error ?? "Could not fetch track details.");
-                    }
-                    setTrackDetails(payload);
-                }
-                catch (error) {
-                    if (detailsRequestRef.current !== requestId) {
-                        return;
-                    }
-                    setTrackDetails(null);
-                    setDetailsError(error instanceof Error ? error.message : "Could not fetch track details.");
-                }
-                finally {
-                    if (detailsRequestRef.current === requestId) {
-                        setDetailsLoading(false);
-                    }
-                }
-            })();
-        }, 450);
-        return () => {
-            window.clearTimeout(timeoutId);
-        };
-    }, [looksLikeSoundCloudUrl, trimmedUrl]);
     const startDownload = async () => {
         if (!trimmedUrl) {
             setStatus("error", "Paste a SoundCloud URL first.");
@@ -127,14 +92,9 @@ export default function App() {
             setStatus("error", error instanceof Error ? error.message : "Download failed unexpectedly.");
         }
     };
-    return (_jsxs("main", { className: "page-shell", children: [_jsx("div", { className: "noise-layer" }), _jsxs("section", { className: "hero", children: [_jsx("p", { className: "eyebrow", children: "Local downloader" }), _jsxs("h1", { children: ["SND", _jsx("span", { children: "CLD" })] }), _jsx("p", { className: "hero-copy", children: "Simple SoundCloud downloading on Windows, no client ID required." })] }), _jsxs("section", { className: "card", children: [_jsxs("label", { className: "field", children: [_jsx("span", { children: "Track URL" }), _jsx("input", { autoComplete: "off", onChange: (event) => setUrl(event.target.value), onKeyDown: (event) => {
+    return (_jsxs("main", { className: "page-shell", children: [_jsx("div", { className: "noise-layer" }), _jsxs("section", { className: "hero", children: [_jsx("p", { className: "eyebrow", children: "Local downloader" }), _jsxs("h1", { children: ["SND", _jsx("span", { children: "CLD" })] }), _jsx("p", { className: "hero-copy", children: "Simple SoundCloud downloading, powered by yt-dlp. Works locally or in the cloud." })] }), _jsxs("section", { className: "card", children: [_jsxs("label", { className: "field", children: [_jsx("span", { children: "Track URL" }), _jsx("input", { autoComplete: "off", onChange: (event) => setUrl(event.target.value), onKeyDown: (event) => {
                                     if (event.key === "Enter" && !isBusy) {
                                         void startDownload();
                                     }
-                                }, placeholder: "https://soundcloud.com/artist/track", spellCheck: false, type: "text", value: url })] }), looksLikeSoundCloudUrl ? (_jsxs("section", { className: "track-details-panel", children: [_jsxs("div", { className: "track-details-head", children: [_jsx("span", { children: "Track Details" }), _jsx("span", { className: `detail-state ${detailsLoading ? "is-live" : ""}`, children: detailsLoading ? "Fetching..." : trackDetails ? "Ready" : "Waiting" })] }), detailsError ? _jsx("p", { className: "detail-error", children: detailsError }) : null, trackDetails ? (_jsxs(_Fragment, { children: [_jsx(TrackSummary, { track: trackDetails.track, details: trackDetails.details }), typeof trackDetails.details.description === "string" &&
-                                        trackDetails.details.description.trim() ? (_jsxs("div", { className: "detail-block", children: [_jsx("h3", { children: "Description" }), _jsx("p", { children: trackDetails.details.description })] })) : null, _jsxs("div", { className: "detail-block", children: [_jsx("h3", { children: "Full server payload" }), _jsx("pre", { children: JSON.stringify(trackDetails.details, null, 2) })] })] })) : null] })) : null, _jsxs("div", { className: "grid-row", children: [_jsxs("label", { className: "field", children: [_jsx("span", { children: "Format" }), _jsxs("select", { onChange: (event) => setFormat(event.target.value), value: format, children: [_jsx("option", { value: "mp3", children: "MP3" }), _jsx("option", { value: "aac", children: "AAC" }), _jsx("option", { value: "opus", children: "OPUS" }), _jsx("option", { value: "m4a", children: "M4A" }), _jsx("option", { value: "flac", children: "FLAC" }), _jsx("option", { value: "wav", children: "WAV" })] })] }), _jsxs("label", { className: "field", children: [_jsx("span", { children: "Quality" }), isLossless ? (_jsx("div", { className: "lossless-pill", children: "Lossless, no extra quality setting" })) : (_jsx("select", { onChange: (event) => setQuality(event.target.value), value: quality, children: qualityOptions.map((option) => (_jsx("option", { value: option.value, children: option.label }, option.value))) }))] })] }), _jsxs("p", { className: "note", children: ["Requires ", _jsx("code", { children: "yt-dlp" }), " and ", _jsx("code", { children: "ffmpeg" }), " in PATH. On Windows, install", _jsx("code", { children: " yt-dlp.exe" }), " and make sure both commands work in PowerShell."] }), _jsx("button", { className: "download-button", disabled: isBusy, onClick: () => void startDownload(), children: isBusy ? "DOWNLOADING" : "DOWNLOAD" }), _jsxs("div", { className: `status-panel ${statusType !== "idle" ? "visible" : ""} ${statusType}`, children: [_jsx("div", { className: "status-dot" }), _jsx("p", { children: statusMessage })] })] })] }));
-}
-function TrackSummary({ track, details }) {
-    const artistProfile = typeof details.user?.permalink_url === "string" ? details.user.permalink_url : "";
-    return (_jsxs("div", { className: "track-summary", children: [track.artworkUrl ? _jsx("img", { alt: track.title, className: "track-artwork", src: track.artworkUrl }) : null, _jsxs("div", { className: "track-summary-copy", children: [_jsx("h2", { children: track.title }), _jsx("p", { children: track.artist }), _jsxs("div", { className: "track-meta-grid", children: [_jsxs("span", { children: ["Duration: ", track.playbackLabel] }), _jsxs("span", { children: ["Quality: ", track.qualityHint] }), details.genre ? _jsxs("span", { children: ["Genre: ", details.genre] }) : null, typeof details.likes_count === "number" ? (_jsxs("span", { children: ["Likes: ", details.likes_count.toLocaleString()] })) : null, typeof details.playback_count === "number" ? (_jsxs("span", { children: ["Plays: ", details.playback_count.toLocaleString()] })) : null, typeof details.comment_count === "number" ? (_jsxs("span", { children: ["Comments: ", details.comment_count.toLocaleString()] })) : null] }), artistProfile ? (_jsx("a", { className: "track-link", href: artistProfile, rel: "noreferrer", target: "_blank", children: "Artist profile" })) : null] })] }));
+                                }, placeholder: "https://soundcloud.com/artist/track", spellCheck: false, type: "text", value: url })] }), _jsxs("div", { className: "grid-row", children: [_jsxs("label", { className: "field", children: [_jsx("span", { children: "Format" }), _jsxs("select", { onChange: (event) => setFormat(event.target.value), value: format, children: [_jsx("option", { value: "mp3", children: "MP3" }), _jsx("option", { value: "aac", children: "AAC" }), _jsx("option", { value: "opus", children: "OPUS" }), _jsx("option", { value: "m4a", children: "M4A" }), _jsx("option", { value: "flac", children: "FLAC" }), _jsx("option", { value: "wav", children: "WAV" })] })] }), _jsxs("label", { className: "field", children: [_jsx("span", { children: isMp3 ? "Bitrate" : "Quality" }), isLossless ? (_jsx("div", { className: "lossless-pill", children: "Lossless, no extra quality setting" })) : isMp3 ? (_jsx("select", { onChange: (event) => setQuality(event.target.value), value: quality, children: mp3BitrateOptions.map((option) => (_jsx("option", { value: option.value, children: option.label }, option.value))) })) : (_jsx("select", { onChange: (event) => setQuality(event.target.value), value: quality, children: qualityOptions.map((option) => (_jsx("option", { value: option.value, children: option.label }, option.value))) }))] })] }), _jsxs("p", { className: "note", children: ["Requires ", _jsx("code", { children: "yt-dlp" }), " and ", _jsx("code", { children: "ffmpeg" }), " available in PATH (install via Homebrew on macOS or your system package manager)."] }), _jsx("button", { className: "download-button", disabled: isBusy, onClick: () => void startDownload(), children: isBusy ? "DOWNLOADING" : "DOWNLOAD" }), _jsxs("div", { className: `status-panel ${statusType !== "idle" ? "visible" : ""} ${statusType}`, children: [_jsx("div", { className: "status-dot" }), _jsx("p", { children: statusMessage })] })] })] }));
 }

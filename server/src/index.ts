@@ -5,7 +5,6 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { config } from "./config.js";
-import { analyzeTrackUrl, assertClientId } from "./soundcloud.js";
 
 const app = express();
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
@@ -13,42 +12,13 @@ const clientDistDir = path.resolve(currentDir, "../../client/dist");
 const ALLOWED_FORMATS = ["mp3", "aac", "opus", "flac", "wav", "m4a"] as const;
 const LOSSLESS_FORMATS = ["flac", "wav"] as const;
 const ALLOWED_QUALITIES = ["0", "2", "5", "7", "9"] as const;
+const MP3_BITRATES = ["128k", "192k", "256k", "320k"] as const;
 
 app.disable("x-powered-by");
 app.use(express.json({ limit: "16kb" }));
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
-});
-
-app.post("/api/track-details", async (req, res) => {
-  const url = typeof req.body?.url === "string" ? req.body.url.trim() : "";
-
-  if (!url) {
-    res.status(400).json({ error: "Missing URL." });
-    return;
-  }
-
-  if (!isSoundCloudUrl(url)) {
-    res.status(400).json({ error: "URL must be a SoundCloud link." });
-    return;
-  }
-
-  try {
-    assertClientId(config.soundCloudClientId);
-    const payload = await analyzeTrackUrl(url, config.soundCloudClientId);
-    res.json(payload);
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to fetch SoundCloud track details.";
-    const status = /valid SoundCloud track URL|did not resolve|Missing SOUNDCLOUD_CLIENT_ID/i.test(
-      message
-    )
-      ? 400
-      : 502;
-
-    res.status(status).json({ error: message });
-  }
 });
 
 function isSoundCloudUrl(value: string) {
@@ -144,10 +114,16 @@ app.post("/api/download", (req, res) => {
   const isLossless = LOSSLESS_FORMATS.includes(
     format as (typeof LOSSLESS_FORMATS)[number]
   );
+  const isMp3 = format === "mp3";
 
-  if (!isLossless && !ALLOWED_QUALITIES.includes(quality as (typeof ALLOWED_QUALITIES)[number])) {
-    res.status(400).json({ error: "Invalid quality value." });
-    return;
+  if (!isLossless) {
+    if (isMp3 && !MP3_BITRATES.includes(quality as (typeof MP3_BITRATES)[number])) {
+      res.status(400).json({ error: "Invalid bitrate value." });
+      return;
+    } else if (!isMp3 && !ALLOWED_QUALITIES.includes(quality as (typeof ALLOWED_QUALITIES)[number])) {
+      res.status(400).json({ error: "Invalid quality value." });
+      return;
+    }
   }
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "sndcld-"));
@@ -164,14 +140,16 @@ app.post("/api/download", (req, res) => {
   ];
 
   if (!isLossless) {
-    args.push("--audio-quality", quality);
+    if (isMp3) {
+      args.push("--postprocessor-args", `ffmpeg:-b:a ${quality}`);
+    } else {
+      args.push("--audio-quality", quality);
+    }
   }
 
   args.push(url);
 
-  const ytdlp = spawn(resolveYtDlpBinary(), args, {
-    windowsHide: true
-  });
+  const ytdlp = spawn(resolveYtDlpBinary(), args);
 
   let stderr = "";
 
@@ -185,7 +163,7 @@ app.post("/api/download", (req, res) => {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       res.status(500).json({
         error:
-          "yt-dlp was not found in PATH. On Windows, install yt-dlp.exe and ffmpeg, then restart the server."
+          "yt-dlp was not found in PATH. Ensure yt-dlp and ffmpeg are installed and available in your PATH."
       });
       return;
     }

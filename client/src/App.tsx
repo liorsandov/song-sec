@@ -1,18 +1,25 @@
-import { useEffect, useRef, useState } from "react";
-import type { Track, TrackDetailsResponse } from "./types";
+import { useEffect, useState } from "react";
 
 const LOSSLESS_FORMATS = new Set(["flac", "wav"]);
+const MP3_BITRATES = ["128k", "192k", "256k", "320k"] as const;
 
 type DownloadFormat = "mp3" | "aac" | "opus" | "m4a" | "flac" | "wav";
-type DownloadQuality = "0" | "2" | "5" | "7" | "9";
+type DownloadQuality = "0" | "2" | "5" | "7" | "9" | "128k" | "192k" | "256k" | "320k";
 type StatusType = "idle" | "downloading" | "done" | "error";
 
-const qualityOptions: Array<{ value: DownloadQuality; label: string }> = [
+const qualityOptions: Array<{ value: "0" | "2" | "5" | "7" | "9"; label: string }> = [
   { value: "0", label: "Best, around 245 kbps" },
   { value: "2", label: "High, around 190 kbps" },
   { value: "5", label: "Medium, around 130 kbps" },
   { value: "7", label: "Low, around 100 kbps" },
   { value: "9", label: "Worst, around 65 kbps" }
+];
+
+const mp3BitrateOptions: Array<{ value: typeof MP3_BITRATES[number]; label: string }> = [
+  { value: "320k", label: "320 kbps (best)" },
+  { value: "256k", label: "256 kbps" },
+  { value: "192k", label: "192 kbps" },
+  { value: "128k", label: "128 kbps" }
 ];
 
 function readFilename(disposition: string | null, fallbackFormat: string) {
@@ -32,86 +39,32 @@ function readFilename(disposition: string | null, fallbackFormat: string) {
 export default function App() {
   const [url, setUrl] = useState("");
   const [format, setFormat] = useState<DownloadFormat>("mp3");
-  const [quality, setQuality] = useState<DownloadQuality>("0");
+  const [quality, setQuality] = useState<DownloadQuality>("320k");
   const [statusType, setStatusType] = useState<StatusType>("idle");
   const [statusMessage, setStatusMessage] = useState(
     "Paste a SoundCloud track URL, choose a format, and download it."
   );
-  const [trackDetails, setTrackDetails] = useState<TrackDetailsResponse | null>(null);
-  const [detailsLoading, setDetailsLoading] = useState(false);
-  const [detailsError, setDetailsError] = useState("");
-  const detailsRequestRef = useRef(0);
 
   const isLossless = LOSSLESS_FORMATS.has(format);
+  const isMp3 = format === "mp3";
   const isBusy = statusType === "downloading";
   const trimmedUrl = url.trim();
   const looksLikeSoundCloudUrl =
     trimmedUrl.includes("soundcloud.com") || trimmedUrl.includes("snd.sc");
 
+  // Reset quality when format changes
+  useEffect(() => {
+    if (isMp3) {
+      setQuality("320k");
+    } else {
+      setQuality("0");
+    }
+  }, [isMp3]);
+
   const setStatus = (type: StatusType, message: string) => {
     setStatusType(type);
     setStatusMessage(message);
   };
-
-  useEffect(() => {
-    if (!trimmedUrl || !looksLikeSoundCloudUrl) {
-      setTrackDetails(null);
-      setDetailsError("");
-      setDetailsLoading(false);
-      return;
-    }
-
-    const requestId = detailsRequestRef.current + 1;
-    detailsRequestRef.current = requestId;
-    setDetailsLoading(true);
-    setDetailsError("");
-
-    const timeoutId = window.setTimeout(() => {
-      void (async () => {
-        try {
-          const response = await fetch("/api/track-details", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ url: trimmedUrl })
-          });
-
-          const payload = (await response.json().catch(() => null)) as
-            | (TrackDetailsResponse & { error?: string })
-            | { error?: string }
-            | null;
-
-          if (detailsRequestRef.current !== requestId) {
-            return;
-          }
-
-          if (!response.ok || !payload || !("track" in payload) || !("details" in payload)) {
-            throw new Error(payload?.error ?? "Could not fetch track details.");
-          }
-
-          setTrackDetails(payload);
-        } catch (error) {
-          if (detailsRequestRef.current !== requestId) {
-            return;
-          }
-
-          setTrackDetails(null);
-          setDetailsError(
-            error instanceof Error ? error.message : "Could not fetch track details."
-          );
-        } finally {
-          if (detailsRequestRef.current === requestId) {
-            setDetailsLoading(false);
-          }
-        }
-      })();
-    }, 450);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [looksLikeSoundCloudUrl, trimmedUrl]);
 
   const startDownload = async () => {
     if (!trimmedUrl) {
@@ -173,7 +126,7 @@ export default function App() {
         <h1>
           SND<span>CLD</span>
         </h1>
-        <p className="hero-copy">Simple SoundCloud downloading on Windows, no client ID required.</p>
+        <p className="hero-copy">Simple SoundCloud downloading, powered by yt-dlp. Works locally or in the cloud.</p>
       </section>
 
       <section className="card">
@@ -194,38 +147,6 @@ export default function App() {
           />
         </label>
 
-        {looksLikeSoundCloudUrl ? (
-          <section className="track-details-panel">
-            <div className="track-details-head">
-              <span>Track Details</span>
-              <span className={`detail-state ${detailsLoading ? "is-live" : ""}`}>
-                {detailsLoading ? "Fetching..." : trackDetails ? "Ready" : "Waiting"}
-              </span>
-            </div>
-
-            {detailsError ? <p className="detail-error">{detailsError}</p> : null}
-
-            {trackDetails ? (
-              <>
-                <TrackSummary track={trackDetails.track} details={trackDetails.details} />
-
-                {typeof trackDetails.details.description === "string" &&
-                trackDetails.details.description.trim() ? (
-                  <div className="detail-block">
-                    <h3>Description</h3>
-                    <p>{trackDetails.details.description}</p>
-                  </div>
-                ) : null}
-
-                <div className="detail-block">
-                  <h3>Full server payload</h3>
-                  <pre>{JSON.stringify(trackDetails.details, null, 2)}</pre>
-                </div>
-              </>
-            ) : null}
-          </section>
-        ) : null}
-
         <div className="grid-row">
           <label className="field">
             <span>Format</span>
@@ -243,9 +164,20 @@ export default function App() {
           </label>
 
           <label className="field">
-            <span>Quality</span>
+            <span>{isMp3 ? "Bitrate" : "Quality"}</span>
             {isLossless ? (
               <div className="lossless-pill">Lossless, no extra quality setting</div>
+            ) : isMp3 ? (
+              <select
+                onChange={(event) => setQuality(event.target.value as DownloadQuality)}
+                value={quality}
+              >
+                {mp3BitrateOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             ) : (
               <select
                 onChange={(event) => setQuality(event.target.value as DownloadQuality)}
@@ -262,8 +194,7 @@ export default function App() {
         </div>
 
         <p className="note">
-          Requires <code>yt-dlp</code> and <code>ffmpeg</code> in PATH. On Windows, install
-          <code> yt-dlp.exe</code> and make sure both commands work in PowerShell.
+          Requires <code>yt-dlp</code> and <code>ffmpeg</code> available in PATH (install via Homebrew on macOS or your system package manager).
         </p>
 
         <button className="download-button" disabled={isBusy} onClick={() => void startDownload()}>
@@ -276,46 +207,5 @@ export default function App() {
         </div>
       </section>
     </main>
-  );
-}
-
-function TrackSummary({
-  track,
-  details
-}: {
-  track: Track;
-  details: TrackDetailsResponse["details"];
-}) {
-  const artistProfile =
-    typeof details.user?.permalink_url === "string" ? details.user.permalink_url : "";
-
-  return (
-    <div className="track-summary">
-      {track.artworkUrl ? <img alt={track.title} className="track-artwork" src={track.artworkUrl} /> : null}
-
-      <div className="track-summary-copy">
-        <h2>{track.title}</h2>
-        <p>{track.artist}</p>
-        <div className="track-meta-grid">
-          <span>Duration: {track.playbackLabel}</span>
-          <span>Quality: {track.qualityHint}</span>
-          {details.genre ? <span>Genre: {details.genre}</span> : null}
-          {typeof details.likes_count === "number" ? (
-            <span>Likes: {details.likes_count.toLocaleString()}</span>
-          ) : null}
-          {typeof details.playback_count === "number" ? (
-            <span>Plays: {details.playback_count.toLocaleString()}</span>
-          ) : null}
-          {typeof details.comment_count === "number" ? (
-            <span>Comments: {details.comment_count.toLocaleString()}</span>
-          ) : null}
-        </div>
-        {artistProfile ? (
-          <a className="track-link" href={artistProfile} rel="noreferrer" target="_blank">
-            Artist profile
-          </a>
-        ) : null}
-      </div>
-    </div>
   );
 }
