@@ -12,7 +12,7 @@ export function WorkspacePanel({
   onSelect
 }: WorkspacePanelProps) {
   return (
-    <section className="panel side-panel">
+    <section className="glass-panel side-panel">
       <div className="section-head">
         <div>
           <p className="section-kicker">Workspace</p>

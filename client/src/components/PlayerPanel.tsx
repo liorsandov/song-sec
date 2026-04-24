@@ -6,7 +6,7 @@ type PlayerPanelProps = {
 
 export function PlayerPanel({ track }: PlayerPanelProps) {
   return (
-    <section className="panel player-panel">
+    <section className="glass-panel player-panel">
       <div className="section-head">
         <div>
           <p className="section-kicker">Official Player</p>

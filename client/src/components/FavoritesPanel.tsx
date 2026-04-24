@@ -12,7 +12,7 @@ export function FavoritesPanel({
   onSelect
 }: FavoritesPanelProps) {
   return (
-    <section className="panel side-panel">
+    <section className="glass-panel side-panel">
       <div className="section-head">
         <div>
           <p className="section-kicker">Favorites</p>

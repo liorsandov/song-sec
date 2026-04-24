@@ -14,28 +14,34 @@ export function UrlInput({
   disabled
 }: UrlInputProps) {
   return (
-    <section className="panel panel-compact">
+    <section className="glass-panel panel-compact">
       <div className="section-head">
         <div>
           <p className="section-kicker">URL Analyzer</p>
-          <h2>Paste a track link</h2>
+          <h2>Inspect a SoundCloud track</h2>
         </div>
         <button
-          className="action-button"
-          onClick={onSubmit}
+          className="glass-button action-button"
           disabled={loading || disabled}
+          onClick={onSubmit}
           type="button"
         >
-          {loading ? "Analyzing..." : "Analyze"}
+          {loading ? "Analyzing" : "Analyze"}
         </button>
       </div>
       <label className="input-shell">
         <span className="input-label">SoundCloud Track URL</span>
         <input
-          value={value}
+          className="glass-control"
           onChange={(event) => onChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !loading && !disabled) {
+              onSubmit();
+            }
+          }}
           placeholder="https://soundcloud.com/artist/track"
           type="url"
+          value={value}
         />
       </label>
     </section>

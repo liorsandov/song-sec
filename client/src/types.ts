@@ -29,7 +29,9 @@ export type TrackDetails = {
   artwork_url?: string | null;
   permalink_url?: string;
   likes_count?: number;
+  like_count?: number;
   playback_count?: number;
+  view_count?: number;
   reposts_count?: number;
   comment_count?: number;
   download_count?: number;
@@ -38,7 +40,21 @@ export type TrackDetails = {
   release_date?: string | null;
   created_at?: string;
   display_date?: string;
+  upload_date?: string;
   license?: string;
+  uploader?: string;
+  channel?: string;
+  channel_is_verified?: boolean;
+  album?: string;
+  webpage_url?: string;
+  acodec?: string;
+  abr?: number;
+  asr?: number;
+  ext?: string;
+  duration_string?: string;
+  age_limit?: number;
+  categories?: string[];
+  tags?: string[];
   user?: {
     [key: string]: unknown;
     username?: string;

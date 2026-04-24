@@ -5,7 +5,7 @@ type RecentSearchesProps = {
 
 export function RecentSearches({ items, onPick }: RecentSearchesProps) {
   return (
-    <section className="panel panel-compact">
+    <section className="glass-panel panel-compact">
       <div className="section-head">
         <div>
           <p className="section-kicker">Recent Searches</p>
@@ -15,7 +15,7 @@ export function RecentSearches({ items, onPick }: RecentSearchesProps) {
       {items.length ? (
         <div className="chip-row">
           {items.map((item) => (
-            <button className="chip" key={item} onClick={() => onPick(item)} type="button">
+            <button className="glass-chip chip" key={item} onClick={() => onPick(item)} type="button">
               {item}
             </button>
           ))}

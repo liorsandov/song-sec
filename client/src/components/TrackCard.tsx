@@ -16,7 +16,7 @@ export function TrackCard({
   onToggleFavorite
 }: TrackCardProps) {
   return (
-    <article className={`track-card ${selected ? "is-selected" : ""}`}>
+    <article className={`track-card glass-panel ${selected ? "is-selected" : ""}`}>
       <button className="track-main" onClick={() => onSelect(track)} type="button">
         <img
           alt={`${track.title} artwork`}
@@ -42,9 +42,10 @@ export function TrackCard({
         aria-label={favorite ? "Remove from favorites" : "Add to favorites"}
         className={`favorite-button ${favorite ? "is-active" : ""}`}
         onClick={() => onToggleFavorite(track)}
+        title={favorite ? "Remove from favorites" : "Add to favorites"}
         type="button"
       >
-        {favorite ? "Saved" : "Favorite"}
+        {favorite ? "★" : "☆"}
       </button>
     </article>
   );

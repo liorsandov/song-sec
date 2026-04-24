@@ -1,6 +1,6 @@
-# SoundCloud Downloader
+# SoundCloud Glass Workspace
 
-Simple localhost SoundCloud downloader with a URL form, format selection, and direct browser download. No SoundCloud client ID is required.
+Glass-styled localhost audio workspace with a direct SoundCloud/YouTube downloader, optional SoundCloud search, URL metadata analysis, official embeds, session tracks, favorites, and recent searches.
 
 ## Requirements
 
@@ -28,6 +28,7 @@ npm install
 
 ```env
 PORT=3217
+# Optional: enables search, URL analysis, and official SoundCloud embeds
 # Optional: override yt-dlp binary path if not in PATH
 # YT_DLP_PATH=/usr/local/bin/yt-dlp
 ```
@@ -64,6 +65,7 @@ This repo is set up to deploy as a single Docker container using the root `Docke
 
 ```env
 PORT=3217
+# Optional: enables search, URL analysis, and official SoundCloud embeds
 # Optional: override yt-dlp binary path (for Railway: /usr/local/bin/yt-dlp is pre-installed)
 # YT_DLP_PATH=/usr/local/bin/yt-dlp
 ```
@@ -100,23 +102,34 @@ The app works on all modern browsers and automatically adjusts for mobile screen
 ## API
 
 - `GET /api/health`
+- `GET /api/search?q=artist%20or%20track`
+- `POST /api/analyze`
 - `POST /api/download`
 
-Request body:
+Download request body:
 
 ```json
 {
+  "source": "soundcloud",
   "url": "https://soundcloud.com/artist/track",
   "format": "mp3",
-  "quality": "0"
+  "quality": "320k"
 }
 ```
 
-`quality` is ignored for `flac` and `wav`.
+Analyze request body:
+
+```json
+{
+  "url": "https://soundcloud.com/artist/track"
+}
+```
+
+`quality` is ignored for `flac` and `wav`. Search and analyze return normalized `Track` payloads used by the glass workspace UI.
 
 ## Notes
 
 - The server shells out to `yt-dlp` and streams the finished file back to the browser.
 - Temporary files are created in the OS temp directory and removed after the response finishes.
-- No SoundCloud API credentials required—`yt-dlp` bypasses SoundCloud's official API entirely.
+- No SoundCloud API credentials required for downloads—`yt-dlp` bypasses SoundCloud's official API entirely.
 - For public deployments, consider adding rate limiting or authentication to prevent abuse.
