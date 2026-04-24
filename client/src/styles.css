@@ -122,7 +122,7 @@ select {
 }
 
 .hero {
-  min-height: 240px;
+  /* min-height: 240px; */
   padding: 28px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

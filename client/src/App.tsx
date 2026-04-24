@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { captureEvent } from "./analytics";
 import { SourceTabs } from "./components/SourceTabs";
 import { TrackPreviewCard } from "./components/TrackPreviewCard";
 import type { SearchResponse, Track, TrackDetails, TrackDetailsResponse } from "./types";
@@ -26,6 +27,7 @@ const SOURCE_OPTIONS = [
 type DownloadFormat = (typeof FORMAT_OPTIONS)[number];
 type DownloadQuality = "0" | "2" | "5" | "7" | "9" | "128k" | "192k" | "256k" | "320k";
 type DownloadSource = (typeof SOURCE_OPTIONS)[number]["value"];
+type DownloadTrigger = "main_button" | "preview_button" | "enter_key";
 type StatusType = "idle" | "downloading" | "done" | "error";
 type LoadState = "idle" | "loading" | "done" | "error";
 
@@ -169,6 +171,7 @@ function buildPreviewMetadataText(track: Track, details: TrackDetails | null, fo
 }
 
 export default function App() {
+  const trackedUrlInputRef = useRef(false);
   const [source, setSource] = useState<DownloadSource>("soundcloud");
   const [url, setUrl] = useState("");
   const [format, setFormat] = useState<DownloadFormat>("mp3");
@@ -297,6 +300,20 @@ export default function App() {
     setStatusMessage(message);
   };
 
+  const handleUrlChange = (value: string) => {
+    const trimmedValue = value.trim();
+
+    setUrl(value);
+
+    captureEvent("download_text_changed", {
+      source,
+      text_length: trimmedValue.length,
+      value: value,
+      has_text: Boolean(trimmedValue),
+      is_valid_url: isSourceUrl(trimmedValue, source)
+    });
+  };
+
   const addToWorkspace = (track: Track) => {
     setWorkspaceTracks((current) => uniqueTracks([track, ...current]).slice(0, 12));
   };
@@ -399,7 +416,21 @@ export default function App() {
     }
   };
 
-  const startDownload = async () => {
+  const startDownload = async (trigger: DownloadTrigger = "main_button") => {
+    const isClickTrigger = trigger !== "enter_key";
+    const validUrl = Boolean(trimmedUrl && isSourceUrl(trimmedUrl, source));
+
+    if (isClickTrigger) {
+      captureEvent("download_clicked", {
+        source,
+        format,
+        quality,
+        trigger,
+        has_text: Boolean(trimmedUrl),
+        valid_url: validUrl
+      });
+    }
+
     if (!trimmedUrl) {
       setStatus("error", selectedSource.emptyMessage);
       return;
@@ -446,8 +477,22 @@ export default function App() {
       if (previewTrack) {
         setRecentDownloads((current) => uniqueTracks([previewTrack, ...current]).slice(0, 8));
       }
+      captureEvent("download_completed", {
+        source,
+        format,
+        quality,
+        trigger,
+        filename_extension: format
+      });
       setStatus("done", `Download complete: ${filename}`);
     } catch (error) {
+      captureEvent("download_failed", {
+        source,
+        format,
+        quality,
+        trigger,
+        error_message: error instanceof Error ? error.message : "Unknown error"
+      });
       setStatus(
         "error",
         error instanceof Error ? error.message : "Download failed unexpectedly."
@@ -505,10 +550,10 @@ export default function App() {
             <input
               autoComplete="off"
               className="glass-control"
-              onChange={(event) => setUrl(event.target.value)}
+              onChange={(event) => handleUrlChange(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !isBusy) {
-                  void startDownload();
+                  void startDownload("enter_key");
                 }
               }}
               placeholder={selectedSource.placeholder}
@@ -569,7 +614,7 @@ export default function App() {
             </label>
           </div>
 
-          <button className="download-button glass-button" disabled={isBusy} onClick={() => void startDownload()}>
+          <button className="download-button glass-button" disabled={isBusy} onClick={() => void startDownload("main_button")}>
             {isBusy ? "Downloading" : "Download"}
           </button>
 
@@ -585,7 +630,7 @@ export default function App() {
           format={format}
           message={previewMessage}
           onCopyMetadata={() => void copyPreviewMetadata()}
-          onDownload={() => void startDownload()}
+          onDownload={() => void startDownload("preview_button")}
           onToggleFavorite={() => {
             if (previewTrack) {
               toggleFavorite(previewTrack);

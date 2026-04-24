@@ -31,7 +31,26 @@ PORT=3217
 # Optional: enables search, URL analysis, and official SoundCloud embeds
 # Optional: override yt-dlp binary path if not in PATH
 # YT_DLP_PATH=/usr/local/bin/yt-dlp
+
+# Optional: enables PostHog analytics in the frontend
+# VITE_POSTHOG_KEY=phc_your_project_api_key
+# VITE_POSTHOG_HOST=https://us.i.posthog.com
 ```
+
+### PostHog Analytics
+
+1. Create a PostHog project at `https://posthog.com/`.
+2. Copy the project API key from **Project Settings > Project Variables**.
+3. Add it to `.env` as `VITE_POSTHOG_KEY`.
+4. Restart `npm run dev`.
+
+The client currently sends these basic events:
+
+- `download_text_entered` when the download URL field receives text.
+- `download_clicked` when the user clicks a download button.
+- `download_completed` and `download_failed` after the download request finishes.
+
+The raw URL/text is not sent to PostHog; only metadata such as source, format, quality, trigger, and text length is captured.
 
 ## Run
 
