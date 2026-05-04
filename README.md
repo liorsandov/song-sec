@@ -32,6 +32,12 @@ PORT=3217
 # Optional: override yt-dlp binary path if not in PATH
 # YT_DLP_PATH=/usr/local/bin/yt-dlp
 
+# Optional: pass YouTube cookies to yt-dlp when YouTube requires sign-in/bot checks
+# Local browser profile, for example: chrome, safari, firefox, edge
+# YT_DLP_COOKIES_FROM_BROWSER=chrome
+# Or a cookies.txt file, better for deployed servers
+# YT_DLP_COOKIES_FILE=/absolute/path/to/cookies.txt
+
 # Optional: enables PostHog analytics in the frontend
 # VITE_POSTHOG_KEY=phc_your_project_api_key
 # VITE_POSTHOG_HOST=https://us.i.posthog.com
@@ -87,6 +93,8 @@ PORT=3217
 # Optional: enables search, URL analysis, and official SoundCloud embeds
 # Optional: override yt-dlp binary path (for Railway: /usr/local/bin/yt-dlp is pre-installed)
 # YT_DLP_PATH=/usr/local/bin/yt-dlp
+# Optional: pass exported cookies.txt to yt-dlp for YouTube bot checks
+# YT_DLP_COOKIES_FILE=/app/cookies.txt
 ```
 
 5. Railway will generate a public domain URL after deployment finishes (e.g., `https://song-sec-prod.railway.app`).
@@ -149,6 +157,11 @@ Analyze request body:
 ## Notes
 
 - The server shells out to `yt-dlp` and streams the finished file back to the browser.
+- If YouTube returns "Sign in to confirm you're not a bot", set `YT_DLP_COOKIES_FROM_BROWSER=chrome` locally, or export a Netscape-format `cookies.txt` and set `YT_DLP_COOKIES_FILE=/absolute/path/to/cookies.txt`. If both are set, `YT_DLP_COOKIES_FILE` is used.
 - Temporary files are created in the OS temp directory and removed after the response finishes.
 - No SoundCloud API credentials required for downloads—`yt-dlp` bypasses SoundCloud's official API entirely.
 - For public deployments, consider adding rate limiting or authentication to prevent abuse.
+
+
+
+https://us.posthog.com/project/391413/dashboard/1493192?query_filters=%7B%22date_from%22%3A%22-1h%22%2C%22date_to%22%3Anull%2C%22explicitDate%22%3Afalse%7D%20

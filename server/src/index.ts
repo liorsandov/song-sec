@@ -245,6 +245,7 @@ function runYtDlpJson(url: string) {
       "--dump-single-json",
       "--skip-download",
       "--no-playlist",
+      ...resolveYtDlpAuthArgs(),
       url
     ]);
     const timeout = setTimeout(() => {
@@ -342,6 +343,18 @@ function resolveYtDlpBinary() {
   return process.env.YT_DLP_PATH?.trim() || "yt-dlp";
 }
 
+function resolveYtDlpAuthArgs() {
+  if (config.ytDlpCookiesFile) {
+    return ["--cookies", config.ytDlpCookiesFile];
+  }
+
+  if (config.ytDlpCookiesFromBrowser) {
+    return ["--cookies-from-browser", config.ytDlpCookiesFromBrowser];
+  }
+
+  return [];
+}
+
 app.post("/api/preview", async (req, res) => {
   const source = typeof req.body?.source === "string" ? req.body.source.trim() : "soundcloud";
   const url = typeof req.body?.url === "string" ? req.body.url.trim() : "";
@@ -437,7 +450,8 @@ app.post("/api/download", (req, res) => {
     format,
     "--output",
     outTemplate,
-    "--no-playlist"
+    "--no-playlist",
+    ...resolveYtDlpAuthArgs()
   ];
 
   if (!isLossless) {
