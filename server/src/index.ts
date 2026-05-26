@@ -130,6 +130,18 @@ function isValidSourceUrl(value: string, source: DownloadSource) {
   return source === "soundcloud" ? isSoundCloudUrl(value) : isYouTubeUrl(value);
 }
 
+function detectSourceFromUrl(value: string): DownloadSource | null {
+  if (isSoundCloudUrl(value)) {
+    return "soundcloud";
+  }
+
+  if (isYouTubeUrl(value)) {
+    return "youtube";
+  }
+
+  return null;
+}
+
 function getSourceLabel(source: DownloadSource) {
   return source === "soundcloud" ? "SoundCloud" : "YouTube";
 }
@@ -326,7 +338,16 @@ function classifyYtDlpFailure(stderr: string, source: DownloadSource) {
     };
   }
 
-  if (/private|login required|sign in/i.test(message)) {
+  if (/sign in to confirm you’re not a bot|sign in to confirm you are not a bot|sign in to continue|accounts\.google\.com\/signin|login required|private/i.test(message)) {
+    if (source === "youtube") {
+      return {
+        status: 400,
+        error:
+          "YouTube requires browser authentication for this content. " +
+          "Set YT_DLP_COOKIES_FROM_BROWSER=chrome locally or YT_DLP_COOKIES_FILE=/absolute/path/to/cookies.txt, then restart the server."
+      };
+    }
+
     return {
       status: 400,
       error: `That ${sourceLabel} track is private or requires access that yt-dlp does not have.`
@@ -356,7 +377,7 @@ function resolveYtDlpAuthArgs() {
 }
 
 app.post("/api/preview", async (req, res) => {
-  const source = typeof req.body?.source === "string" ? req.body.source.trim() : "soundcloud";
+  const source = typeof req.body?.source === "string" ? req.body.source.trim() : "";
   const url = typeof req.body?.url === "string" ? req.body.url.trim() : "";
 
   if (!url) {
@@ -364,15 +385,17 @@ app.post("/api/preview", async (req, res) => {
     return;
   }
 
-  if (!ALLOWED_SOURCES.includes(source as DownloadSource)) {
+  if (source && !ALLOWED_SOURCES.includes(source as DownloadSource)) {
     res.status(400).json({ error: "Invalid source." });
     return;
   }
 
-  const previewSource = source as DownloadSource;
+  const requestedSource = source ? (source as DownloadSource) : null;
+  const detectedSource = detectSourceFromUrl(url);
+  const previewSource = detectedSource ?? requestedSource;
 
-  if (!isValidSourceUrl(url, previewSource)) {
-    res.status(400).json({ error: `URL must be a ${getSourceLabel(previewSource)} link.` });
+  if (!previewSource) {
+    res.status(400).json({ error: "URL must be a SoundCloud or YouTube link." });
     return;
   }
 
@@ -388,14 +411,14 @@ app.post("/api/preview", async (req, res) => {
       return;
     }
 
-    res.status(400).json({
-      error: error instanceof Error ? error.message.slice(-500) : "Metadata preview failed."
-    });
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const failure = classifyYtDlpFailure(errorMessage, previewSource);
+    res.status(failure.status).json({ error: failure.error });
   }
 });
 
 app.post("/api/download", (req, res) => {
-  const source = typeof req.body?.source === "string" ? req.body.source.trim() : "soundcloud";
+  const source = typeof req.body?.source === "string" ? req.body.source.trim() : "";
   const url = typeof req.body?.url === "string" ? req.body.url.trim() : "";
   const format = typeof req.body?.format === "string" ? req.body.format.trim() : "";
   const quality =
@@ -408,15 +431,17 @@ app.post("/api/download", (req, res) => {
     return;
   }
 
-  if (!ALLOWED_SOURCES.includes(source as DownloadSource)) {
+  if (source && !ALLOWED_SOURCES.includes(source as DownloadSource)) {
     res.status(400).json({ error: "Invalid source." });
     return;
   }
 
-  const downloadSource = source as DownloadSource;
+  const requestedSource = source ? (source as DownloadSource) : null;
+  const detectedSource = detectSourceFromUrl(url);
+  const downloadSource = detectedSource ?? requestedSource;
 
-  if (!isValidSourceUrl(url, downloadSource)) {
-    res.status(400).json({ error: `URL must be a ${getSourceLabel(downloadSource)} link.` });
+  if (!downloadSource) {
+    res.status(400).json({ error: "URL must be a SoundCloud or YouTube link." });
     return;
   }
 

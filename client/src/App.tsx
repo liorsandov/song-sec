@@ -87,6 +87,18 @@ function isSourceUrl(value: string, source: DownloadSource) {
   }
 }
 
+function detectSourceFromUrl(value: string): DownloadSource | null {
+  if (isSourceUrl(value, "soundcloud")) {
+    return "soundcloud";
+  }
+
+  if (isSourceUrl(value, "youtube")) {
+    return "youtube";
+  }
+
+  return null;
+}
+
 function readStoredTracks(key: string) {
   try {
     const raw = window.localStorage.getItem(key);
@@ -302,15 +314,21 @@ export default function App() {
 
   const handleUrlChange = (value: string) => {
     const trimmedValue = value.trim();
+    const detectedSource = detectSourceFromUrl(trimmedValue);
 
     setUrl(value);
 
+    if (detectedSource && detectedSource !== source) {
+      setSource(detectedSource);
+    }
+
     captureEvent("download_text_changed", {
-      source,
+      source: detectedSource ?? source,
+      detected_source: detectedSource,
       text_length: trimmedValue.length,
       value: value,
       has_text: Boolean(trimmedValue),
-      is_valid_url: isSourceUrl(trimmedValue, source)
+      is_valid_url: Boolean(detectedSource)
     });
   };
 
